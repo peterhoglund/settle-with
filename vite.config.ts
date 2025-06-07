@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => {
 		},
     base: './',
 		build: {
-			outDir: 'docs' // make sure the build is in the docs folder
+			outDir: 'build'
 		}
 	};
 });
