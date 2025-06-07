@@ -116,7 +116,7 @@ const App: React.FC = () => {
         <div className="max-w-3xl w-full mx-auto">
           <header className="text-center mb-12 animate-fadeIn">
             <h1 className="text-6xl sm:text-7xl font-unica text-brand-text drop-shadow-md">
-              Settler
+              Settle With
             </h1>
             <p className="mt-4 text-lg text-brand-textSecondary">
               Settle expenses effortlessly.
