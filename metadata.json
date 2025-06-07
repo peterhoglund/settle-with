@@ -1,0 +1,6 @@
+{
+  "name": "Settler",
+  "description": "A simple web application to calculate who owes whom money after shared expenses. Add people and their expenditures, and the app will determine the payments needed to even things out.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}
