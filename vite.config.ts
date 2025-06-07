@@ -13,6 +13,7 @@ export default defineConfig(({ mode }) => {
 				'@': path.resolve(__dirname, '.'),
 			}
 		},
+    base: './',
 		build: {
 			outDir: 'docs' // make sure the build is in the docs folder
 		}
