@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from 'lz-string';
 import { PersonInputForm } from './components/PersonInputForm';
 import { PeopleList } from './components/PeopleList';
 import { SettlementDisplay } from './components/SettlementDisplay';
@@ -26,8 +27,13 @@ const App: React.FC = () => {
 
     if (dataParam) {
       try {
-        const decodedJson = atob(dataParam);
-        const parsedPeople = JSON.parse(decodedJson);
+        const decompressedData = decompressFromEncodedURIComponent(dataParam);
+        if (!decompressedData) {
+          console.warn('Failed to decompress data from URL or data is null.');
+          throw new Error('Decompression failed');
+        }
+        
+        const parsedPeople = JSON.parse(decompressedData);
 
         if (Array.isArray(parsedPeople) && parsedPeople.every(
           (p: any) => typeof p.id === 'string' &&
@@ -36,7 +42,7 @@ const App: React.FC = () => {
         )) {
           setPeople(parsedPeople as Person[]);
         } else {
-          console.warn('Invalid data structure in URL parameter.');
+          console.warn('Invalid data structure in URL parameter after decompression.');
         }
       } catch (error) {
         console.error('Failed to parse data from URL:', error);
@@ -79,8 +85,8 @@ const App: React.FC = () => {
     }
     try {
       const jsonToEncode = JSON.stringify(people);
-      const encodedData = btoa(jsonToEncode);
-      const shareUrl = `${window.location.origin}${window.location.pathname}?data=${encodedData}`;
+      const compressedData = compressToEncodedURIComponent(jsonToEncode);
+      const shareUrl = `${window.location.origin}${window.location.pathname}?data=${compressedData}`;
 
       await navigator.clipboard.writeText(shareUrl);
       setShareNotification("Link copied to clipboard!");
