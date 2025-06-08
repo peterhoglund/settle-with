@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 interface PersonInputFormProps {
   onAddPerson: (name: string, amountSpent: number) => void;
@@ -16,21 +16,24 @@ export const PersonInputForm: React.FC<PersonInputFormProps> = ({ onAddPerson })
   const [amount, setAmount] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [placeholderName, setPlaceholderName] = useState<string>('');
+  const nameInputRef = useRef<HTMLInputElement>(null); // Ref for the name input
 
   useEffect(() => {
     const randomIndex = Math.floor(Math.random() * exampleNames.length);
     setPlaceholderName(exampleNames[randomIndex]);
-  }, []); // Empty dependency array ensures this runs only on mount
+  }, []); 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
       setError('Name cannot be empty.');
+      nameInputRef.current?.focus(); // Focus name input on error
       return;
     }
     const spentAmount = parseFloat(amount);
     if (isNaN(spentAmount) || spentAmount < 0) {
       setError('Please enter a valid non-negative amount.');
+      // Potentially focus amount input here if it exists and is a separate ref
       return;
     }
     
@@ -38,6 +41,7 @@ export const PersonInputForm: React.FC<PersonInputFormProps> = ({ onAddPerson })
     onAddPerson(name.trim(), spentAmount);
     setName('');
     setAmount('');
+    nameInputRef.current?.focus(); // Set focus to name input after successful submission
   };
 
   return (
@@ -48,6 +52,7 @@ export const PersonInputForm: React.FC<PersonInputFormProps> = ({ onAddPerson })
             Participant's Name
           </label>
           <input
+            ref={nameInputRef} // Attach ref
             type="text"
             id="name"
             value={name}

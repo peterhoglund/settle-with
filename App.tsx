@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { PersonInputForm } from './components/PersonInputForm';
 import { PeopleList } from './components/PeopleList';
 import { SettlementDisplay } from './components/SettlementDisplay';
+import { FunStatsDisplay } from './components/FunStatsDisplay';
 import { calculateSettlements } from './utils/expenseCalculator';
 import { Person, Transaction } from './types';
 
@@ -105,6 +106,7 @@ const App: React.FC = () => {
 
   const peopleListCardAnimationDelay = 0.3;
   const settlementPlanCardAnimationDelay = 0.1;
+  const funStatsCardAnimationDelay = settlementPlanCardAnimationDelay + 0.15;
   const baseItemAnimationDelay = 0.05;
 
   const jaggedEdgeTexture = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAAFCAYAAACjKgd3AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAABRSURBVHgBnc5BDcAgEETRlVAJSKiESsFBJSClUiqhElZCJQyfI4QQ4CfvBJOs2SBJNz5EW43RhVd1jnNmHPBoXHkPvfGBhF9zlX+pPd21lyNmNajFub8COB4AAAAASUVORK5CYII=';
@@ -179,6 +181,7 @@ const App: React.FC = () => {
             width: '100%',
             flexShrink: 0,
           }}
+          className="animate-fadeIn"
         />
       )}
 
@@ -205,7 +208,7 @@ const App: React.FC = () => {
             }}
           />
           
-          <div className="relative z-[1] max-w-3xl w-full mx-auto py-8 px-4 sm:px-6 lg:px-8">
+          <div className="relative z-[1] max-w-3xl w-full mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-8">
             <section
               className="bg-light-surface border border-light-border rounded-2xl p-6 sm:p-8 shadow-xl animate-fadeInDelayed"
               style={{animationDelay: `${settlementPlanCardAnimationDelay}s`}}
@@ -228,6 +231,17 @@ const App: React.FC = () => {
               </div>
               <SettlementDisplay transactions={transactions} />
             </section>
+
+            {people.length > 1 && (
+              <section
+                className="bg-light-surface border border-light-border rounded-2xl p-6 sm:p-8 shadow-xl animate-fadeInDelayed"
+                style={{animationDelay: `${funStatsCardAnimationDelay}s`}}
+                aria-labelledby="fun-stats-heading"
+              >
+                <FunStatsDisplay people={people} transactions={transactions} />
+              </section>
+            )}
+
           </div>
         </div>
       )}
