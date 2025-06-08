@@ -7,6 +7,27 @@ import { FunStatsDisplay } from './components/FunStatsDisplay';
 import { calculateSettlements } from './utils/expenseCalculator';
 import { Person, Transaction } from './types';
 
+// Helper function to convert Uint8Array to Base64 string
+function uint8ArrayToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+// Helper function to convert Base64 string to Uint8Array
+function base64ToUint8Array(base64: string): Uint8Array {
+  const binary_string = atob(base64);
+  const len = binary_string.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binary_string.charCodeAt(i);
+  }
+  return bytes;
+}
+
 const App: React.FC = () => {
   const [people, setPeople] = useState<Person[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -21,31 +42,72 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const dataParam = urlParams.get('data');
-
-    if (dataParam) {
+    const processUrlData = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const compressedDataParam = urlParams.get('cdata');
+      const legacyDataParam = urlParams.get('data');
+      
       try {
-        const decodedJson = atob(dataParam);
-        const parsedPeople = JSON.parse(decodedJson);
+        if (compressedDataParam) {
+          if (typeof CompressionStream === 'undefined' || typeof DecompressionStream === 'undefined') {
+            console.warn('Compression API not supported, cannot process compressed data.');
+            setShareNotification("This browser doesn't support the feature to read this shared link.");
+            setTimeout(() => setShareNotification(null), 5000);
+            // Clear URL param even if not processed to avoid re-processing on refresh
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, document.title, newUrl);
+            return;
+          }
+          const compressedUint8Array = base64ToUint8Array(compressedDataParam);
+          const blob = new Blob([compressedUint8Array]);
+          const decompressionStream = blob.stream().pipeThrough(new DecompressionStream('gzip'));
+          const decompressedBuffer = await new Response(decompressionStream).arrayBuffer();
+          const decodedJson = new TextDecoder().decode(decompressedBuffer);
+          const parsedPeople = JSON.parse(decodedJson);
 
-        if (Array.isArray(parsedPeople) && parsedPeople.every(
-          (p: any) => typeof p.id === 'string' &&
-                      typeof p.name === 'string' &&
-                      typeof p.amountSpent === 'number' && !isNaN(p.amountSpent)
-        )) {
-          setPeople(parsedPeople as Person[]);
-        } else {
-          console.warn('Invalid data structure in URL parameter.');
+          if (Array.isArray(parsedPeople) && parsedPeople.every(
+            (p: any) => typeof p.id === 'string' &&
+                        typeof p.name === 'string' &&
+                        typeof p.amountSpent === 'number' && !isNaN(p.amountSpent)
+          )) {
+            setPeople(parsedPeople as Person[]);
+          } else {
+            console.warn('Invalid data structure in compressed URL parameter.');
+             setShareNotification("Invalid data in shared link.");
+             setTimeout(() => setShareNotification(null), 3000);
+          }
+        } else if (legacyDataParam) {
+          const decodedJson = atob(legacyDataParam);
+          const parsedPeople = JSON.parse(decodedJson);
+
+          if (Array.isArray(parsedPeople) && parsedPeople.every(
+            (p: any) => typeof p.id === 'string' &&
+                        typeof p.name === 'string' &&
+                        typeof p.amountSpent === 'number' && !isNaN(p.amountSpent)
+          )) {
+            setPeople(parsedPeople as Person[]);
+          } else {
+            console.warn('Invalid data structure in URL parameter.');
+            setShareNotification("Invalid data in shared link.");
+            setTimeout(() => setShareNotification(null), 3000);
+          }
         }
       } catch (error) {
         console.error('Failed to parse data from URL:', error);
+        setShareNotification("Error reading shared link data.");
+        setTimeout(() => setShareNotification(null), 3000);
       } finally {
-        const newUrl = window.location.pathname;
-        window.history.replaceState({}, document.title, newUrl);
+        if (compressedDataParam || legacyDataParam) {
+          const newUrl = window.location.pathname;
+          window.history.replaceState({}, document.title, newUrl);
+        }
       }
+    };
+
+    if(appReady) { // Ensure app is ready before processing URL data
+        processUrlData();
     }
-  }, []);
+  }, [appReady]);
 
 
   const handleAddPerson = useCallback((name: string, amountSpent: number) => {
@@ -78,12 +140,25 @@ const App: React.FC = () => {
       return;
     }
     try {
-      const jsonToEncode = JSON.stringify(people);
-      const encodedData = btoa(jsonToEncode);
-      const shareUrl = `${window.location.origin}${window.location.pathname}?data=${encodedData}`;
+      if (typeof CompressionStream === 'undefined') {
+         console.warn('CompressionStream API not available. Falling back to uncompressed sharing.');
+         const jsonToEncode = JSON.stringify(people);
+         const encodedData = btoa(jsonToEncode);
+         const shareUrl = `${window.location.origin}${window.location.pathname}?data=${encodedData}`;
+         await navigator.clipboard.writeText(shareUrl);
+         setShareNotification("Link copied (uncompressed due to browser limits)!");
+      } else {
+        const jsonToEncode = JSON.stringify(people);
+        const dataStream = new Blob([jsonToEncode], { type: 'text/plain' }).stream();
+        const compressedStream = dataStream.pipeThrough(new CompressionStream('gzip'));
+        const compressedBuffer = await new Response(compressedStream).arrayBuffer();
+        const compressedUint8Array = new Uint8Array(compressedBuffer);
+        const encodedData = uint8ArrayToBase64(compressedUint8Array);
+        const shareUrl = `${window.location.origin}${window.location.pathname}?cdata=${encodedData}`;
 
-      await navigator.clipboard.writeText(shareUrl);
-      setShareNotification("Link copied to clipboard!");
+        await navigator.clipboard.writeText(shareUrl);
+        setShareNotification("Compressed link copied to clipboard!");
+      }
     } catch (err) {
       console.error('Failed to copy link: ', err);
       setShareNotification("Failed to copy link. Try manually.");
@@ -101,7 +176,7 @@ const App: React.FC = () => {
   }, [people]);
 
   if (!appReady) {
-    return null;
+    return null; 
   }
 
   const peopleListCardAnimationDelay = 0.3;
@@ -128,8 +203,14 @@ const App: React.FC = () => {
           {shareNotification && (
             <div
               className={`fixed top-5 right-5 p-4 rounded-xl shadow-lg text-white ${
-                shareNotification.startsWith("Failed") ? 'bg-red-500/80' : 'bg-green-500/80'
-              } backdrop-blur-sm border ${shareNotification.startsWith("Failed") ? 'border-red-400' : 'border-green-400'} transition-all duration-300 ease-in-out z-50 animate-fadeIn`}
+                shareNotification.startsWith("Failed") || shareNotification.startsWith("Error") || shareNotification.startsWith("Invalid data") ? 'bg-red-500/80' : 
+                shareNotification.includes("uncompressed") ? 'bg-yellow-500/80' : 
+                shareNotification.includes("browser doesn't support") ? 'bg-orange-500/80' : 'bg-green-500/80'
+              } backdrop-blur-sm border ${
+                shareNotification.startsWith("Failed") || shareNotification.startsWith("Error") || shareNotification.startsWith("Invalid data") ? 'border-red-400' : 
+                shareNotification.includes("uncompressed") ? 'border-yellow-400' : 
+                shareNotification.includes("browser doesn't support") ? 'border-orange-400' : 'border-green-400'
+              } transition-all duration-300 ease-in-out z-50 animate-fadeIn`}
               role="alert"
             >
               {shareNotification}
