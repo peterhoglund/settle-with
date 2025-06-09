@@ -1,13 +1,15 @@
+
 <!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Settle With</title>
+  <title>Pay Loop</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Unica+One&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -21,6 +23,7 @@
           fontFamily: {
             sans: ['"Space Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', '"Liberation Mono"', '"Courier New"', 'monospace'],
             unica: ['"Unica One"', '"Space Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', '"Liberation Mono"', '"Courier New"', 'monospace'],
+            'archivo-black': ['"Archivo Black"', 'sans-serif'], // Added Archivo Black
           },
           colors: {
             brand: { 
@@ -104,6 +107,9 @@
     .font-unica { /* Ensure Unica One is applied even if Tailwind JIT needs explicit help */
       font-family: 'Unica One', 'Space Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     }
+    .font-archivo-black { /* Ensure Archivo Black is applied */
+      font-family: 'Archivo Black', sans-serif;
+    }
     input[type=number]::-webkit-outer-spin-button,
     input[type=number]::-webkit-inner-spin-button {
       -webkit-appearance: none;
@@ -139,8 +145,7 @@
     "@google/genai": "https://esm.sh/@google/genai@^1.4.0",
     "@fortawesome/fontawesome-svg-core": "https://esm.sh/@fortawesome/fontawesome-svg-core@6.5.2",
     "@fortawesome/free-solid-svg-icons": "https://esm.sh/@fortawesome/free-solid-svg-icons@6.5.2",
-    "@fortawesome/react-fontawesome": "https://esm.sh/@fortawesome/react-fontawesome@0.2.2",
-    "lz-string": "https://esm.sh/lz-string@^1.5.0"
+    "@fortawesome/react-fontawesome": "https://esm.sh/@fortawesome/react-fontawesome@0.2.2"
   }
 }
 </script>

@@ -1,18 +1,24 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from 'lz-string';
 import { PersonInputForm } from './components/PersonInputForm';
 import { PeopleList } from './components/PeopleList';
 import { SettlementDisplay } from './components/SettlementDisplay';
 import { FunStatsDisplay } from './components/FunStatsDisplay';
+import { DebugControls } from './components/DebugControls'; // Import DebugControls
 import { calculateSettlements } from './utils/expenseCalculator';
 import { Person, Transaction } from './types';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faChartPie, faChevronDown, faChevronUp, faShareAlt } from '@fortawesome/free-solid-svg-icons';
+
+// Simple flag to toggle debug controls. Set to false to hide.
+const DEBUG_MODE = false;
 
 const App: React.FC = () => {
   const [people, setPeople] = useState<Person[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [shareNotification, setShareNotification] = useState<string | null>(null);
   const [appReady, setAppReady] = useState(false);
+  const [showFunStats, setShowFunStats] = useState(true); // State for FunStats visibility
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -27,13 +33,8 @@ const App: React.FC = () => {
 
     if (dataParam) {
       try {
-        const decompressedData = decompressFromEncodedURIComponent(dataParam);
-        if (!decompressedData) {
-          console.warn('Failed to decompress data from URL or data is null.');
-          throw new Error('Decompression failed');
-        }
-        
-        const parsedPeople = JSON.parse(decompressedData);
+        const decodedJson = atob(dataParam);
+        const parsedPeople = JSON.parse(decodedJson);
 
         if (Array.isArray(parsedPeople) && parsedPeople.every(
           (p: any) => typeof p.id === 'string' &&
@@ -42,7 +43,7 @@ const App: React.FC = () => {
         )) {
           setPeople(parsedPeople as Person[]);
         } else {
-          console.warn('Invalid data structure in URL parameter after decompression.');
+          console.warn('Invalid data structure in URL parameter.');
         }
       } catch (error) {
         console.error('Failed to parse data from URL:', error);
@@ -85,8 +86,8 @@ const App: React.FC = () => {
     }
     try {
       const jsonToEncode = JSON.stringify(people);
-      const compressedData = compressToEncodedURIComponent(jsonToEncode);
-      const shareUrl = `${window.location.origin}${window.location.pathname}?data=${compressedData}`;
+      const encodedData = btoa(jsonToEncode);
+      const shareUrl = `${window.location.origin}${window.location.pathname}?data=${encodedData}`;
 
       await navigator.clipboard.writeText(shareUrl);
       setShareNotification("Link copied to clipboard!");
@@ -106,25 +107,42 @@ const App: React.FC = () => {
     }
   }, [people]);
 
+  const handleAddDebugPeople = useCallback(() => {
+    const debugNames = ["Debug Alice", "Debug Bob", "Debug Carol"];
+    const newDebugPeople: Person[] = debugNames.map((name, index) => ({
+      id: `debug-person-${Date.now()}-${index}-${Math.random().toString(36).substring(2, 7)}`,
+      name: name,
+      amountSpent: parseFloat((Math.random() * (100 - 50) + 50).toFixed(2)),
+    }));
+    setPeople(prevPeople => [...prevPeople, ...newDebugPeople]);
+    setShareNotification(`${newDebugPeople.length} debug participants added!`);
+    setTimeout(() => setShareNotification(null), 3000);
+  }, []);
+
+  const toggleFunStats = () => {
+    setShowFunStats(prev => !prev);
+  };
+
   if (!appReady) {
     return null;
   }
 
   const peopleListCardAnimationDelay = 0.3;
   const settlementPlanCardAnimationDelay = 0.1;
-  const funStatsCardAnimationDelay = settlementPlanCardAnimationDelay + 0.15;
+  const funStatsCardAnimationDelay = settlementPlanCardAnimationDelay + 0.15; // Single delay for the merged card
   const baseItemAnimationDelay = 0.05;
 
   const jaggedEdgeTexture = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAAFCAYAAACjKgd3AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAABRSURBVHgBnc5BDcAgEETRlVAJSKiESsFBJSClUiqhElZCJQyfI4QQ4CfvBJOs2SBJNz5EW43RhVd1jnNmHPBoXHkPvfGBhF9zlX+pPd21lyNmNajFub8COB4AAAAASUVORK5CYII=';
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Dark Theme Top Section */}
+      {DEBUG_MODE && <DebugControls onAddDebugPeople={handleAddDebugPeople} />}
+
       <div className="py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl w-full mx-auto">
           <header className="text-center mb-12 animate-fadeIn">
             <h1 className="text-6xl sm:text-7xl font-unica text-brand-text drop-shadow-md">
-              Settle With
+              Pay Loop
             </h1>
             <p className="mt-4 text-lg text-brand-textSecondary">
               Settle expenses effortlessly.
@@ -134,8 +152,14 @@ const App: React.FC = () => {
           {shareNotification && (
             <div
               className={`fixed top-5 right-5 p-4 rounded-xl shadow-lg text-white ${
-                shareNotification.startsWith("Failed") ? 'bg-red-500/80' : 'bg-green-500/80'
-              } backdrop-blur-sm border ${shareNotification.startsWith("Failed") ? 'border-red-400' : 'border-green-400'} transition-all duration-300 ease-in-out z-50 animate-fadeIn`}
+                shareNotification.startsWith("Failed") ? 'bg-red-500/80' : 
+                shareNotification.includes("debug") ? 'bg-blue-500/80' :
+                'bg-green-500/80' 
+              } backdrop-blur-sm border ${
+                shareNotification.startsWith("Failed") ? 'border-red-400' : 
+                shareNotification.includes("debug") ? 'border-blue-400' :
+                'border-green-400'
+              } transition-all duration-300 ease-in-out z-50 animate-fadeIn`}
               role="alert"
             >
               {shareNotification}
@@ -175,7 +199,6 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {/* New Jagged Edge Separator */}
       {people.length > 0 && (
         <div
           aria-hidden="true"
@@ -191,14 +214,13 @@ const App: React.FC = () => {
         />
       )}
 
-      {/* Light Theme Bottom Section */}
       {people.length > 0 && (
         <div
           className="text-light-text flex-grow relative"
         >
           <div
             className="absolute inset-0"
-            style={{ backgroundColor: '#F4F7FC' /* light.background */ }}
+            style={{ backgroundColor: '#F4F7FC' }}
             aria-hidden="true"
           />
           <div
@@ -219,8 +241,8 @@ const App: React.FC = () => {
               className="bg-light-surface border border-light-border rounded-2xl p-6 sm:p-8 shadow-xl animate-fadeInDelayed"
               style={{animationDelay: `${settlementPlanCardAnimationDelay}s`}}
             >
-              <div className="flex justify-between items-center mb-6 border-b border-light-border pb-4">
-                <h2 className="text-3xl font-semibold text-light-text font-unica">
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 border-b border-light-border pb-4 gap-4 sm:gap-0">
+                <h2 className="text-3xl font-semibold text-light-text font-unica shrink-0 mr-4">
                   Who Owes Who?
                 </h2>
                 <button
@@ -229,9 +251,7 @@ const App: React.FC = () => {
                   aria-label="Share current expense list"
                   disabled={people.length === 0}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 group-hover:scale-110 transition-transform" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
-                  </svg>
+                  <FontAwesomeIcon icon={faShareAlt} className="h-4 w-4 sm:h-5 sm:w-5 mr-2 group-hover:scale-110 transition-transform" />
                   Share
                 </button>
               </div>
@@ -240,14 +260,51 @@ const App: React.FC = () => {
 
             {people.length > 1 && (
               <section
-                className="bg-light-surface border border-light-border rounded-2xl p-6 sm:p-8 shadow-xl animate-fadeInDelayed"
-                style={{animationDelay: `${funStatsCardAnimationDelay}s`}}
-                aria-labelledby="fun-stats-heading"
+                className="bg-light-surface border border-light-border rounded-2xl shadow-xl animate-fadeInDelayed"
+                style={{ animationDelay: `${funStatsCardAnimationDelay}s` }}
+                aria-labelledby="fun-stats-card-heading"
               >
-                <FunStatsDisplay people={people} transactions={transactions} />
+                <div
+                  id="fun-stats-card-header"
+                  onClick={toggleFunStats}
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={showFunStats}
+                  aria-controls="fun-stats-content-area"
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleFunStats(); }}}
+                  className={`p-5 sm:p-6 cursor-pointer transition-all duration-200 ease-in-out group flex justify-center items-center focus:outline-none hover:bg-slate-50 focus-visible:bg-slate-100 ${
+                    showFunStats ? 'rounded-t-2xl' : 'rounded-2xl'
+                  }`}
+                  aria-label={showFunStats ? "Hide group spending statistics" : "View group spending statistics"}
+                >
+                  <h2 
+                    id="fun-stats-card-heading" 
+                    className="text-lg font-semibold text-light-text group-hover:text-light-primaryHover transition-colors flex items-center"
+                  >
+                    <FontAwesomeIcon 
+                      icon={faChartPie} 
+                      className="h-6 w-6 text-light-primary group-hover:text-light-primaryHover transition-colors mr-2" 
+                      aria-hidden="true"
+                    />
+                    Group Spending Stats
+                    <FontAwesomeIcon 
+                      icon={showFunStats ? faChevronUp : faChevronDown} 
+                      className="h-5 w-5 text-light-textSecondary group-hover:text-light-text transition-transform duration-200 ease-in-out ml-2"
+                      aria-hidden="true"
+                    />
+                  </h2>
+                </div>
+
+                {showFunStats && (
+                  <div
+                    id="fun-stats-content-area"
+                    className="p-6 sm:p-8 border-t border-light-border" 
+                  >
+                    <FunStatsDisplay people={people} transactions={transactions} />
+                  </div>
+                )}
               </section>
             )}
-
           </div>
         </div>
       )}
@@ -259,7 +316,7 @@ const App: React.FC = () => {
       }`}>
         <div className="max-w-3xl w-full mx-auto px-4 sm:px-6 lg:px-8">
           <p className="text-sm">
-            (C) Copyright Settler 2025
+            (C) Copyright Pay Loop 2025
           </p>
         </div>
       </footer>

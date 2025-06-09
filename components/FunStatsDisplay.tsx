@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { Person, Transaction } from '../types';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -20,7 +21,7 @@ interface FunStatsDisplayProps {
 // Helper function to calculate a color based on a percentage
 const getPercentageColor = (percentage: number): string => {
   const hue = (percentage / 100) * 120; // 0 (red) to 120 (green)
-  return `hsl(${hue}, 70%, 50%)`;
+  return `hsl(${hue.toFixed(0)},70%,50%)`; 
 };
 
 
@@ -74,8 +75,9 @@ export const FunStatsDisplay: React.FC<FunStatsDisplayProps> = ({ people, transa
     if (people.length > 1 && averageSpent > 0.005) {
         const mean = averageSpent;
         const stdDev = Math.sqrt(people.reduce((sum, p) => sum + Math.pow(p.amountSpent - mean, 2), 0) / people.length);
-        const cv = stdDev / mean;
+        const cv = mean === 0 ? (stdDev === 0 ? 0 : Infinity) : stdDev / mean;
         spendingEquality = Math.max(0, Math.min(100, (1 - cv) * 100));
+        if (isNaN(spendingEquality)) spendingEquality = 0;
     } else if (people.length <= 1 || (averageSpent < 0.005 && totalSpent < 0.005) ) {
         spendingEquality = 100;
     } else if (averageSpent < 0.005 && totalSpent > 0.005) {
@@ -126,49 +128,49 @@ export const FunStatsDisplay: React.FC<FunStatsDisplayProps> = ({ people, transa
     );
   }
 
-  const statItemBaseDelay = 0.05;
+  const statItemBaseDelay = 0.05; // Base delay for the first item when stats are shown
   const statItemStagger = 0.07;
   let currentStaggerIndex = 0;
 
   const renderStatCard = (
     title: string,
-    iconElement: JSX.Element, // Changed from iconSvgElement to iconElement
+    iconElement: JSX.Element,
     content: JSX.Element,
-    colorClass: string = "text-light-primary"
+    plateBgClass: string = "bg-cyan-100",
+    plateTextClass: string = "text-cyan-700"
   ) => (
     <div
-      className="bg-white/80 p-5 rounded-xl shadow-lg border border-light-border/70 animate-fadeIn flex flex-col min-h-[160px]"
+      className="bg-light-surface rounded-xl shadow-xl border border-light-border animate-fadeIn flex flex-col min-h-[220px]"
       style={{ animationDelay: `${statItemBaseDelay + statItemStagger * currentStaggerIndex++}s` }}
     >
-      <div className="flex items-center mb-3">
-        <span className={`mr-2.5 ${colorClass}`} aria-hidden="true">
+      <div className={`flex flex-row items-center justify-center px-4 py-2 rounded-t-xl shadow-sm ${plateBgClass}`}>
+        <span className={`mr-2 ${plateTextClass}`} aria-hidden="true">
           {iconElement}
         </span>
-        <h3 className={`font-semibold ${colorClass}`}>{title}</h3>
+        <h3 className={`font-semibold ${plateTextClass}`}>{title}</h3>
       </div>
-      <div className="flex-grow flex flex-col justify-center">
+      <div className="flex-grow flex flex-col justify-center p-5">
         {content}
       </div>
     </div>
   );
 
-  // Specific card contents
   const totalSpendContent = (
     <>
-      <p className="text-4xl font-bold text-light-primary text-center">{stats.totalSpent.toFixed(2)}</p>
+      <p className="font-archivo-black text-7xl text-center text-cyan-600">{stats.totalSpent.toFixed(2)}</p>
     </>
   );
 
   const averageSpendContent = (
     <>
-      <p className="text-4xl font-bold text-teal-600 text-center">{stats.averageSpent.toFixed(2)}</p>
+      <p className="font-archivo-black text-7xl text-center text-teal-600">{stats.averageSpent.toFixed(2)}</p>
       <p className="text-sm text-light-textSecondary text-center mt-1">Fair share per person</p>
     </>
   );
 
   const bigSpenderContent = stats.bigSpender ? (
     <>
-      <p className="text-2xl font-bold text-orange-500 truncate text-center" title={stats.bigSpender.name}>
+      <p className="font-archivo-black text-5xl truncate text-center text-orange-600" title={stats.bigSpender.name}>
         {stats.bigSpender.name}
       </p>
       <p className="text-lg text-light-text text-center mt-1">
@@ -176,7 +178,7 @@ export const FunStatsDisplay: React.FC<FunStatsDisplayProps> = ({ people, transa
       </p>
       <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
         <div
-          className="bg-orange-500 h-2.5 rounded-full"
+          className="bg-orange-400 h-2.5 rounded-full"
           style={{ width: `${stats.bigSpender.percentageOfTotal.toFixed(0)}%` }}
         ></div>
       </div>
@@ -185,7 +187,7 @@ export const FunStatsDisplay: React.FC<FunStatsDisplayProps> = ({ people, transa
 
   const pennyPincherContent = stats.pennyPincher ? (
     <>
-      <p className="text-2xl font-bold text-pink-500 truncate text-center" title={stats.pennyPincher.name}>
+      <p className="font-archivo-black text-5xl truncate text-center text-pink-600" title={stats.pennyPincher.name}>
         {stats.pennyPincher.name}
       </p>
       <p className="text-lg text-light-text text-center mt-1">
@@ -193,7 +195,7 @@ export const FunStatsDisplay: React.FC<FunStatsDisplayProps> = ({ people, transa
       </p>
        <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
         <div
-          className="bg-pink-500 h-2.5 rounded-full"
+          className="bg-pink-400 h-2.5 rounded-full"
           style={{ width: `${stats.pennyPincher.percentageOfTotal.toFixed(0)}%` }}
         ></div>
       </div>
@@ -202,32 +204,34 @@ export const FunStatsDisplay: React.FC<FunStatsDisplayProps> = ({ people, transa
 
   const perfectBalanceContent = stats.perfectBalancePerson ? (
      <>
-      <p className="text-2xl font-bold text-green-600 truncate text-center" title={`${stats.perfectBalancePerson.name} was ${stats.perfectBalancePerson.diffFromAverage.toFixed(2)} from the average`}>
-        {stats.perfectBalancePerson.name} at {stats.perfectBalancePerson.diffFromAverage.toFixed(2)}
+      <p className="font-archivo-black text-7xl text-center text-green-600">
+        {stats.perfectBalancePerson.diffFromAverage.toFixed(2)}
       </p>
-      <p className="text-lg text-light-text text-center mt-1">
-        Spent: {stats.perfectBalancePerson.amountSpent.toFixed(2)}, Avg: {stats.averageSpent.toFixed(2)}
+      <p className="text-xl font-medium text-green-500 truncate text-center mt-1" title={stats.perfectBalancePerson.name}>
+         by {stats.perfectBalancePerson.name}
       </p>
+      <p className="text-sm text-light-textSecondary text-center">from average spend</p>
     </>
   ) : <p className="text-light-textSecondary text-center">N/A</p>;
 
   const wealthDisparityContent = (
     <div className="text-center">
-      <p className="text-3xl font-bold text-red-500">{stats.wealthDisparity.toFixed(2)} gap</p>
-      <div className="flex justify-around items-end mt-6 h-12"> 
+      <p className="font-archivo-black text-7xl text-center text-red-600">{stats.wealthDisparity.toFixed(2)}</p>
+      <p className="text-xl text-red-500 -mt-1 mb-2">gap</p>
+      <div className="flex justify-around items-end mt-2 h-10"> 
         <div className="text-xs text-light-textSecondary">
           <div
-            className="bg-red-400 mx-auto"
+            className="bg-red-200 mx-auto"
             style={{
-              width: '20px',
+              width: '16px',
               height: `${stats.bigSpender && stats.bigSpender.amountSpent > 0.005 ? Math.max(0, (stats.pennyPincher?.amountSpent ?? 0) / stats.bigSpender.amountSpent) * 100 : 0}%`,
               minHeight: '2px'
             }}></div>
-          Lowest: {stats.pennyPincher?.amountSpent.toFixed(2) ?? 'N/A'}
+          Low: {stats.pennyPincher?.amountSpent.toFixed(2) ?? 'N/A'}
         </div>
         <div className="text-xs text-light-textSecondary">
-          <div className="bg-green-400 mx-auto" style={{ width: '20px', height: '100%', minHeight: '2px' }}></div>
-          Highest: {stats.bigSpender?.amountSpent.toFixed(2) ?? 'N/A'}
+          <div className="bg-green-200 mx-auto" style={{ width: '16px', height: '100%', minHeight: '2px' }}></div>
+          High: {stats.bigSpender?.amountSpent.toFixed(2) ?? 'N/A'}
         </div>
       </div>
     </div>
@@ -245,7 +249,7 @@ export const FunStatsDisplay: React.FC<FunStatsDisplayProps> = ({ people, transa
             cx="30"
             cy="30"
             r="28"
-            stroke="#e5e7eb" // bg-gray-200
+            stroke="#E5E7EB" 
             strokeWidth="4"
             fill="transparent"
           />
@@ -263,18 +267,18 @@ export const FunStatsDisplay: React.FC<FunStatsDisplayProps> = ({ people, transa
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-xl font-bold" style={{ color: calculatedSpendingEqualityColor }}>
+          <span className={`font-archivo-black text-6xl text-[${calculatedSpendingEqualityColor}]`}>
             {stats.spendingEquality.toFixed(0)}%
           </span>
         </div>
       </div>
-      <p className="text-sm text-light-textSecondary text-center mt-1">How equally the group spent</p>
+      <p className="text-sm text-light-textSecondary text-center mt-2">How equally the group spent</p>
     </div>
   );
 
   const sponsorContent = stats.sponsor ? (
     <>
-      <p className="text-2xl font-bold text-purple-600 truncate text-center" title={stats.sponsor.name}>
+      <p className="font-archivo-black text-5xl truncate text-center text-purple-600" title={stats.sponsor.name}>
         {stats.sponsor.name}
       </p>
       <p className="text-lg text-light-text text-center mt-1">
@@ -286,57 +290,63 @@ export const FunStatsDisplay: React.FC<FunStatsDisplayProps> = ({ people, transa
 
   return (
     <div>
-      <h2 id="fun-stats-heading" className="text-3xl font-semibold text-light-text font-unica mb-6 border-b border-light-border pb-4">
-        Group Spending Stats
-      </h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-6">
+      {/* The h2 title "Group Spending Stats" has been removed from here and is now part of the clickable header in App.tsx */}
+      <div className="grid grid-cols-1 gap-6">
         {renderStatCard(
           "Group Total",
           <FontAwesomeIcon icon={faSackDollar} className="w-6 h-6" />,
           totalSpendContent,
-          "text-light-primary"
+          "bg-cyan-100",
+          "text-cyan-700"
         )}
         {renderStatCard(
           "Average Spending",
           <FontAwesomeIcon icon={faScaleBalanced} className="w-6 h-6" />,
           averageSpendContent,
-          "text-teal-600"
+          "bg-teal-100",
+          "text-teal-700"
         )}
         {renderStatCard(
           "The Big Spender",
           <FontAwesomeIcon icon={faCrown} className="w-6 h-6" />,
           bigSpenderContent,
-          "text-orange-500"
+          "bg-orange-100",
+          "text-orange-700"
         )}
         {renderStatCard(
           "The Cautious Spender",
           <FontAwesomeIcon icon={faPiggyBank} className="w-6 h-6" />,
           pennyPincherContent,
-          "text-pink-500"
+          "bg-pink-100",
+          "text-pink-700"
         )}
         {renderStatCard(
           "Closest to Average",
           <FontAwesomeIcon icon={faBullseye} className="w-6 h-6" />,
           perfectBalanceContent,
-          "text-green-600"
+          "bg-green-100",
+          "text-green-700"
         )}
         {renderStatCard(
           "The Group Sponsor",
           <FontAwesomeIcon icon={faAward} className="w-6 h-6" />,
           sponsorContent,
-          "text-purple-600"
+          "bg-purple-100",
+          "text-purple-700"
         )}
         {renderStatCard(
           "Wealth Gap",
           <FontAwesomeIcon icon={faCircleHalfStroke} className="w-6 h-6" />,
           wealthDisparityContent,
-          "text-red-500"
+          "bg-red-100",
+          "text-red-700"
         )}
         {renderStatCard(
           "Equality Meter",
           <FontAwesomeIcon icon={faHandsClapping} className="w-6 h-6" />,
           spendingEqualityContent,
-          `text-[${calculatedSpendingEqualityColor}]`
+          "bg-slate-100",
+          "text-slate-700"
         )}
       </div>
     </div>
